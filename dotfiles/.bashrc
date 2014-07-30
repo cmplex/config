@@ -22,4 +22,4 @@ alias igrep='grep -i'
 alias s='du -hs'
 
 # shell prompt
-export PS1="\[$(tput setaf 2)\]\u\[$(tput setaf 7)\]@\[$(tput setaf 2)\]\h \[$(tput setaf 3)\]\[$(tput bold)\]\W \[$(tput setaf 7)\]> \[$(tput sgr0)\]"
+export PS1="\[$(tput setaf 5)\]\u\[$(tput setaf 7)\]@\[$(tput setaf 5)\]\h \[$(tput bold)\]\[$(tput setaf 6)\]\W \[$(tput setaf 7)\]> \[$(tput sgr0)\]"
