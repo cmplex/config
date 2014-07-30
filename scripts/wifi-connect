@@ -1,0 +1,117 @@
+#!/bin/bash
+#/usr/bin/wifi-connect
+
+AUTH_MAX_ATTEMPTS=3
+LEASE_MAX_ATTEMPTS=3
+
+wpa_authenticate () {
+  # authenticate using wpa_supplicant
+  auth_attempts=0
+  wpa_attempt_authentication; while test $? -eq 2; do
+    test ${auth_attempts} -lt ${AUTH_MAX_ATTEMPTS} && wpa_attempt_authentication || return 2
+  done
+
+  ssid="$(cat /var/log/wpa_supplicant.log  | grep -Po "(?<=SSID=\').*(?=\')")" &&
+    { echo 'associated with: '${ssid}; return 0; } ||
+    { echo 'failed to associate with any wireless networks'; return 2; }
+}
+
+# attempt to authenticate once, using wpa_supplicant
+# return  0: success
+#         1: error
+#         2: timeout / potentially recoverable error
+wpa_attempt_authentication () {
+  rm /var/log/wpa_supplicant.log > /dev/null 2>&1
+
+	wpa_supplicant -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant.conf -f /var/log/wpa_supplicant.log > /dev/null 2>&1 &
+
+  # do some busy waiting for wpa supplicant logfile
+  echo -ne '\nwaiting for wpa supplicant logfile...'
+  until test -s /var/log/wpa_supplicant.log; do
+    echo -ne '.'; ((t++)); test ${t} -ge 5 && { echo -n 'timeout'; return 2; } || sleep ${t}
+  done
+  echo -ne '..done\n'
+
+
+  # check if wpa control interface initialization failed
+  tail -n 5 /var/log/wpa_supplicant.log | grep 'Failed to initialize control interface' > /dev/null 2>&1 && {
+    echo -ne '\ncleaning up previous wpa_supplicant executions...'
+    # clean up previous wpa_supplicant executions
+    killall wpa_supplicant > /dev/null 2>&1
+    rm -rf /var/run/wpa_supplicant/wlan0
+    rm -rf /var/run/wpa_supplicant
+
+    # start over
+    wpa_supplicant -i wlan0\
+      -c /etc/wpa_supplicant/wpa_supplicant.conf\
+      -f /var/log/wpa_supplicant.log\
+    > /dev/null 2>&1 &
+
+    echo -ne '..done\n'
+  }
+
+
+  # do some busy waiting for wpa_supplicant to authenticate
+  t=1
+  echo -ne 'waiting for wpa authentication...'
+  until tail -n 5 /var/log/wpa_supplicant.log | grep 'completed (auth)' > /dev/null 2>&1; do
+    echo -ne '.'; ((t++)); test ${t} -ge 5 && { echo -n 'timeout'; return 2; } || sleep ${t}
+  done
+  echo -ne 'done\n'
+
+  return 0
+}
+
+# attempt to acquire a dhcp lease using dhclient, once
+# return  0: success
+#         1: error
+#         2: timeout / potentially recoverable error
+attempt_lease_acquisition () {
+  # acquire dhcp lease
+  rm /tmp/wlan0.lease > /dev/null 2>&1
+  dhclient -1 -lf /tmp/wlan0.lease wlan0 &
+
+  # wait for dhclient to write lease file
+  echo -ne '\nwaiting for DHCP lease...'
+  t=1
+  until test -s /tmp/wlan0.lease; do
+    echo -ne '.'
+
+    # wait longer on subsequent iterations
+    ((t++))
+    # timeout after 10 seconds (4+3+2+1)
+    test $t -ge 5 && { echo -n 'timeout'; return 2; } || sleep ${t}
+
+  done
+  echo -ne '..done\n'
+
+
+  addr=`ifconfig wlan0 | grep -Po\
+    '(?<=inet addr:)\d+\.\d+\.\d+\.\d+'` &&
+    { echo "bound to: ${addr}"; return 0; } ||
+    { echo "failed to acquire address"; return 2; }
+}
+
+acquire_lease () {
+  to=0
+  # attempt lease acquisition, retry 5x on timeout, start over after 5 attempts
+  attempt_lease_acquisition
+  while test $? -eq 2; do
+    ((to++)); test ${to} -le ${LEASE_MAX_ATTEMPTS} && attempt_lease_acquisition || return 2
+  done
+
+  return 0
+}
+
+start () {
+  # bring down networking
+  #dhclient -r wlan0 || exit 1
+
+  wpa_authenticate
+
+  acquire_lease
+
+  exit 0
+}
+
+start
