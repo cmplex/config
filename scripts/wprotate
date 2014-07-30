@@ -23,12 +23,10 @@ if test -z ${UNUSED_COUNT}; then
 fi
 
 
-echo $UNUSED_COUNT
-
 # get a random image file from UNUSED files
 RND=$(shuf -i 1-${UNUSED_COUNT} -n 1)
 RND_FILE=$(printf '%s\n' ${UNUSED} | sed "${RND}q;d")
 
 
-feh --bg-fill "${WP_DIR}/black.png" "${RND_FILE}"
+feh --bg-fill "${RND_FILE}"
 attr -s used -V 1 "${RND_FILE}" > /dev/null 2>&1

@@ -1,51 +1,6 @@
 # This shell script is run before Openbox launches.
 # Environment variables set here are passed to the Openbox session.
 
-# Set a background color
-BG=""
-if which hsetroot >/dev/null 2>&1; then
-    BG=hsetroot
-else
-    if which esetroot >/dev/null 2>&1; then
-	BG=esetroot
-    else
-	if which xsetroot >/dev/null 2>&1; then
-	    BG=xsetroot
-	fi
-    fi
-fi
-test -z $BG || $BG -solid "#303030"
-
-# D-bus
-if which dbus-launch >/dev/null 2>&1 && test -z "$DBUS_SESSION_BUS_ADDRESS"; then
-       eval `dbus-launch --sh-syntax --exit-with-session`
-fi
-
-# Make GTK apps look and behave how they were set up in the gnome config tools
-if test -x /usr/libexec/gnome-settings-daemon >/dev/null; then
-  /usr/libexec/gnome-settings-daemon &
-elif which gnome-settings-daemon >/dev/null 2>&1; then
-  gnome-settings-daemon &
-# Make GTK apps look and behave how they were set up in the XFCE config tools
-elif which xfce-mcs-manager >/dev/null 2>&1; then
-  xfce-mcs-manager n &
-fi
-
-# Preload stuff for KDE apps
-if which start_kdeinit >/dev/null 2>&1; then
-  LD_BIND_NOW=true start_kdeinit --new-startup +kcminit_startup &
-fi
-
-# Run XDG autostart things.  By default don't run anything desktop-specific
-# See xdg-autostart --help more info
-DESKTOP_ENV="OPENBOX"
-if which /usr/lib/openbox/xdg-autostart >/dev/null 2>&1; then
-  /usr/lib/openbox/xdg-autostart $DESKTOP_ENV
-fi
-
-
-setxkbmap de &
-conky &
 xcompmgr &
 tint2 &
 
@@ -56,12 +11,18 @@ tint2 &
   done
 } &
 
-# Set display config
-/usr/bin/xrandr --output VGA1 --mode 1280x1024 --left-of HDMI1 --auto
-/usr/bin/xrandr --output HDMI1 --mode 1920x1080 --right-of VGA1 --auto
+## Volume control for systray
+(sleep 2s && pnmixer) &
 
-nitrogen --restore &
+## Detect and configure touchpad. See 'man synclient' for more info.
+if egrep -iq 'touchpad' /proc/bus/input/devices; then
+    synclient VertEdgeScroll=1 &
+    synclient TapButton1=1 &
+fi
 
-# Wake on LAN
-/usr/sbin/ethtool -s eth0 wol g
-echo enabled > /sys/class/net/eth0/device/power/wakeup
+## Set keyboard settings - 250 ms delay and 25 cps (characters per second) repeat rate.
+## Adjust the values according to your preferances.
+xset r rate 250 25 &
+
+## Turn on/off system beep
+xset b off &

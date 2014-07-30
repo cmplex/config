@@ -18,8 +18,8 @@ alias s='du -hs'
 alias rgrep='grep --color -R'
 alias igrep='grep -i'
 
-# other handy shell aliases
-alias s='du -hs'
+alias wifi-connect='sudo wifi-connect'
+alias pm-suspend='sudo pm-suspend'
 
 # shell prompt
 export PS1="\[$(tput setaf 5)\]\u\[$(tput setaf 7)\]@\[$(tput setaf 5)\]\h \[$(tput bold)\]\[$(tput setaf 6)\]\W \[$(tput setaf 7)\]> \[$(tput sgr0)\]"
