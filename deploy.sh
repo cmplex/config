@@ -75,7 +75,6 @@ sync_repo_interactive () {
   for folder in ${SYNC_FOLDERS}; do
     for file in $(find ${folder} -type f); do
       sync_file_interactive "${file}" "${folder}"
-      echo $?
     done
   done
 }
