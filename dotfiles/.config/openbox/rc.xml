@@ -414,18 +414,6 @@
         <command>terminator</command>
       </action>
     </keybind>
-    <keybind key="Mod4-F">
-      <action name="Execute">
-        <enabled>true</enabled>
-        <command>pcmanfm</command>
-      </action>
-    </keybind>
-    <keybind key="Mod4-E">
-      <action name="Execute">
-        <enabled>true</enabled>
-        <command>gedit</command>
-      </action>
-    </keybind>
     <keybind key="Mod4-W">
       <action name="Execute">
         <enabled>true</enabled>
